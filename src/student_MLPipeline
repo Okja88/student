@@ -1,0 +1,242 @@
+# Programing Information
+# PROGRAMMER: NATHAN ONG KEE WEE
+# DATE CREATED : 15-08-2023
+# LAST REVISED DATE : 21-08-2023
+# PURPOSE : Creating a Training and Predicting Pipeline, resulting in selcecting the optised features based on metrics used
+
+# Implementation - Creating a Training and Predicting Pipeline
+
+# To properly evaluate the performance of each model that is chosen, it's important to create a training and predicting pipeline that allows quick and effective training of models using various sizes of training data and perform predictions on the testing data.
+# The implementation here will be used in the following section.
+# The code block below will be needed to implement:
+
+# Import fbeta_score and accuracy_score from sklearn.metrics.
+# Fit the learner to the sampled training data and record the training time.
+# Perform predictions on the test data X_test, and also on the first 300 training points X_train[:300].
+# Record the total prediction time. Calculate the accuracy score for both the training subset and testing set.
+# Calculate the F-score for both the training subset and testing set.
+# Making sure that the beta parameter set.
+
+# Import pandas
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from time import time
+
+# Import argparse
+import argparse
+
+# Import two metrics from sklearn - fbeta_score and accuracy_score
+# Import libraries necessary for this project, including fbeta and accuracy_score
+# from sklearn.feature_extraction.text import CountVectoriser
+from sklearn.metrics import accuracy_score, fbeta_score, precision_score, recall_score
+from student_prepare_data import X_train, X_test, y_train, y_test, accuracy
+
+# Use argparse Expected Call with <> indicating expected user input:
+#       python student_eda.py --dir <directory with student data>
+#   Example call:
+#       python student_eda.py --dir student_ML/ --studentTable score.db
+
+# Create Argument Parser object named parser
+parser = argparse.ArgumentParser(description= "Machine Learning Implementation Pipelines")
+parser.usage =  "Type the command: python student.prepare_data.py -v(erbose) <#>" \
+                "# - 1 for 'Pipeline 1: Get predictions on the first 300 training samples(X_train)'" \
+                "# - 2 for 'Pipeline 2: Results, accuracy, fbeta_score on three models of SVC,DecisionTreeClassifier,RandomForestClassifier'" \
+                "# - 3 for 'Printing out the values for 1%, 10% and 100%'" \
+                "# - 4 for 'Use gridsearch to fit and predict accuracy and fbeta scores'" \
+                "# - 5 for 'Fit, train and obtain top 5 feature importances features on the chosen model'" \
+                "# - 6 for 'Obtain accuracy and fbeta scores on final model'" \
+
+# Argument 1: Add a path to the folder where the directory  is student_ML, file is student_eda.py
+parser.add_argument('-v', '--verbose', type = int, help ='Machine Learning Implementation Pipelines', choices=[1,2,3,4,5,6])
+
+# Assigns variable in_args to parse_args()
+in_args = parser.parse_args()
+
+# Machine Learning Implementation Pipeline 1
+def train_predict(learner, sample_size, X_train, y_train, X_test, y_test):
+    '''
+    inputs:
+       - learner: the learning algorithm to be trained and predicted on
+       - sample_size: the size of samples (number) to be drawn from training set
+       - X_train: features training set
+       - y_train: final_test training set
+       - X_test: features testing set
+       - y_test: final_test testing set
+    '''
+
+    results = {}
+
+    # Fit the learner to the training data using slicing with 'sample_size' using .fit(training_features[:], training_labels[:])
+    start = time()  # Get start time
+    learner = learner.fit(X_train[:sample_size], y_train[:sample_size])
+    end = time()  # Get end time
+
+    # Calculate the training time
+    results['train_time'] = end - start
+
+    # Get the predictions on the test set(X_test),
+    # then get predictions on the first 300 training samples(X_train) using .predict()
+    start = time()  # Get start time
+    predictions_test = learner.predict(X_test)
+    predictions_train = learner.predict(X_train[:300])
+    end = time()  # Get end time
+
+    # Calculate the total prediction time
+    results['pred_time'] = end - start
+
+    # Compute accuracy on the first 300 training samples which is y_train[:300]
+    results['acc_train'] = accuracy_score(y_train[:300], predictions_train)
+
+    # Compute accuracy on test set using accuracy_score()
+    results['acc_test'] = accuracy_score(y_test, predictions_test)
+
+    # Not computing F-score on the the first 300 training samples using fbeta_score()
+    results['f_train'] = fbeta_score(y_train[:300], predictions_train, average='weighted', beta=0.5)
+
+    # Not compute F-score on the test set which is y_test
+    results['f_test'] = fbeta_score(y_test, predictions_test, average='weighted', beta=0.5)
+
+    # Success
+    print("{} trained on {} samples.".format(learner.__class__.__name__, sample_size))
+
+    # Return the results
+    return results
+
+    # Implementation: Initial Model Evaluation
+
+    # The following will be implemented:
+    # Import the three supervised learning models you've discussed in the previous section.
+    # Initialize the three models and store them in 'clf_A', 'clf_B', and 'clf_C'.
+    # Use a 'random_state' for each model used, if provided.
+    # Note: Use the default settings for each model — you will tune one specific model in a later section.
+    # Calculate the number of records equal to 1%, 10%, and 100% of the training data.
+    # Store those values in 'samples_1', 'samples_10', and 'samples_100' respectively.
+
+    # Machine Learning Implementation Pipeline 2
+    # Import the three supervised learning models from sklearn
+    from sklearn.svm import SVC
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn import preprocessing
+    le = preprocessing.LabelEncoder()
+    from sklearn.metrics import fbeta_score, make_scorer
+
+    # Initialize the three models
+    clf_C = SVC(random_state = 2)
+    clf_B = DecisionTreeClassifier(random_state = 2)
+    clf_A = RandomForestClassifier(random_state = 2)
+
+    # Calculate the number of samples for 1%, 10%, and 100% of the training data
+    # samples_100 is the entire training set i.e. len(y_train)
+    # samples_10 is 10% of samples_100 (ensure to set the count of the values to be `int` and not `float`)
+    # samples_1 is 1% of samples_100 (ensure to set the count of the values to be `int` and not `float`)
+    samples_100 = len(y_train)
+    samples_10 = int(round(len(y_train)* 0.1))
+    samples_1 = int(round(len(y_train) * 0.01))
+
+
+    # Collect results on the learners
+    results = {}
+    for clf in [clf_A, clf_B, clf_C]:
+        clf_name = clf.__class__.__name__
+        results[clf_name] = {}
+        for i, samples in enumerate([samples_1, samples_10, samples_100]):
+            results[clf_name][i] = \
+            train_predict(clf, samples, X_train, y_train, X_test, y_test)
+
+    # Print metrics visualization for the three supervised learning models chosen
+    print(results, accuracy, fbeta_score)
+
+    # Machine Learning Implementation Pipeline 3
+    # Printing out the values
+    for i in results.items():
+        print(i[0])
+        pd.DataFrame(i[1]).rename(columns={0:'1%', 1:'10%', 2:'100%'})
+
+    # Machine Learning Implementation Pipeline 4
+    # Import 'GridSearchCV', 'make_scorer', and any other necessary libraries
+    from sklearn.model_selection import GridSearchCV
+
+    # Initialize the classifier
+    # oob_score SET True to get inner-CrossValidation, oob can only be set to True if bootstrap is True
+    # using all processes to run in parellel by setting n_jobs to -1
+    clf_A = RandomForestClassifier(n_jobs = -1, random_state = 2, criterion="gini", min_samples_split=2, bootstrap=True, oob_score = True)
+
+    # Create the parameters list you wish to tune, using a dictionary if needed.
+    # parameters = {'parameter_1': [value1, value2], 'parameter_2': [value1, value2]}
+    # n_estimators is the number of trees in the forest
+    parameters = [{'max_depth': [2, 3, 5, 7, 9],
+            'min_samples_leaf': [5,10,20,40,80],
+            'n_estimators': [5,20,80,100,200,250]}]
+
+    # Make an fbeta_score scoring object using make_scorer()
+    scorer = make_scorer(fbeta_score, beta=0.5)
+
+    # Perform grid search on the classifier using 'scorer' as the scoring method using GridSearchCV()
+    # with n_jobs=1 it uses 100% of the cpu of one of the cores. Each process is run in a different core. with n_jobs = -1, it uses all the cores for parellel processing
+    # verbose=0 to show nothing (silent), verbose=1 will show animated progress bar, verbose=2 will state number of epoch
+    # cv(cross validation is set to 4-fold, instead of the default 5Fold, (Stratified)KFold) if the estimator is a classifier and y is either binary or multiclass
+    grid_obj = GridSearchCV(estimator = clf_A, refit=True, param_grid = parameters, cv = 4, n_jobs = -1, verbose = 1, scoring = scorer)
+
+    # Fit the grid search object to the training data and find the optimal parameters using fit()
+    grid_fit = grid_obj.fit(X_train, y_train)
+
+    # Get the estimator
+    best_clf = grid_fit.best_estimator_
+
+    # Make predictions using the unoptimized and model
+    predictions = (clf.fit(X_train, y_train)).predict(X_test)
+    best_predictions = best_clf.predict(X_test)
+
+    # Report the before-and-afterscores
+    print("Unoptimized model\n------")
+    print("Accuracy score on testing data: {:.4f}".format(accuracy_score(y_test, predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, predictions, beta = 0.5)))
+    print("\nOptimized Model\n------")
+    print("Final accuracy score on the testing data: {:.4f}".format(accuracy_score(y_test, best_predictions)))
+    print("Final F-score on the testing data: {:.4f}".format(fbeta_score(y_test, best_predictions, beta = 0.5)))
+
+    # Machine Learning Implementation Pipeline 5
+    # Import a supervised learning model that has 'feature_importances_'
+    from sklearn.ensemble import RandomForestClassifier
+
+    # Train the supervised model on the training set using .fit(X_train, y_train)
+    donors = RandomForestClassifier(n_jobs = -1, max_depth = 5, n_estimators = 200, random_state=2)
+    donors.fit(X_train, y_train)
+
+    # Extract the feature importances using .feature_importances_
+    # Feature importances are provided by the fitted attribute feature_importances_ and they are computed as the mean and standard deviation of accumulation of the impurity decrease within each tree
+    importances = donors.feature_importances_
+    for features, importances in zip(X_train, importances):
+        print(features, importances)
+    std = np.std([donors.feature_importances_ for donors in donors.estimators_], axis=0)
+
+    # Plot the feature importance:
+    plt.bar(range(X_train.shape[1]), clf.feature_importances_)
+    plt.xlabel('Features')
+    plt.ylabel("Importance")
+
+    # Machine Learning Implementation Pipeline 6
+    # Import functionality for cloning a model
+    from sklearn.base import clone
+
+    # Reduce the feature space
+    X_train_reduced = X_train[X_train.columns.values[(np.argsort(importances)[::-1])[:5]]]
+    X_test_reduced = X_test[X_test.columns.values[(np.argsort(importances)[::-1])[:5]]]
+
+    # Train on the "best" model found from grid search earlier
+    clf = (clone(best_clf)).fit(X_train_reduced, y_train)
+
+    # Make new predictions
+    reduced_predictions = clf.predict(X_test_reduced)
+
+    # Report scores from the final model using both versions of data
+    print("Final Model trained on full data\n------")
+    print("Accuracy on testing data: {:.4f}".format(accuracy_score(y_test, best_predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, best_predictions, beta = 0.5)))
+    print("\nFinal Model trained on reduced data\n------")
+    print("Accuracy on testing data: {:.4f}".format(accuracy_score(y_test, reduced_predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, reduced_predictions, beta = 0.5)))
+
+train_predict()
